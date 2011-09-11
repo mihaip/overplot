@@ -1,0 +1,75 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+    <title>Google Maps JavaScript API Example</title>
+    <script src="http://maps.google.com/maps?file=api&amp;v=2&amp;key=abcdefg"
+            type="text/javascript"></script>
+    <script src="../web/util.js" type="text/javascript"></script>
+    <script type="text/javascript">
+    //<![CDATA[
+    
+    var map;
+    var containerNode;
+
+    function load() {
+      if (!GBrowserIsCompatible()) return;
+      
+      containerNode = getNode("map");
+      map = new GMap2(containerNode);
+      map.addControl(new GSmallMapControl());
+      map.setCenter(new GLatLng(40.731711, -73.987715), 14);
+      resizeMap();
+
+      window.onresize = resizeMap;
+      GEvent.addListener(map, "click", function(marker, point) {
+        
+        getNode("lat-lng").value = point.lat() + "," + point.lng();
+      });
+    }
+    
+    function resizeMap() {
+      var width, height;
+      
+      // all except Explorer
+      if (window.innerHeight) {
+        width = window.innerWidth;
+        height = window.innerHeight;
+      }
+      // Explorer 6 Strict Mode
+      else {
+        width = document.documentElement.clientWidth;
+        height = document.documentElement.clientHeight;
+      }  
+      
+      containerNode.style.width = width + "px";
+      containerNode.style.height = height + "px";
+      
+      map.checkResize();
+    }    
+
+    //]]>
+    </script>
+    <style type="text/css">
+      html, body {
+        margin: 0;
+        padding: 0;
+      }
+      
+      #map {
+        cursor: crosshair;
+      }
+      
+      #lat-lng {
+        position: absolute;
+        bottom: 2px;
+        right: 2px;
+      }
+    </style>
+  </head>
+  <body onload="load()" onunload="GUnload()">
+    <div id="map" style="width: 500px; height: 300px"></div>
+    <input type="text" size="50" id="lat-lng" />
+  </body>
+</html>

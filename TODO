@@ -1,0 +1,39 @@
+TODO:
+- Cross-browser rounded corner in bubble
+- Bad geocodes:
+  Merrill Lynch lobby, Broadway & Park Row
+  13 & Broadway
+  116 & Broadway
+- Add date and heard by in info window bubble
+
+  
+Done:
+- Neighborhoods when really zoomed out
+- Flickering when switching between quotes
+- window.console.log may not always be available
+- window width/height cross browser
+- Basic search
+- Logo and name
+- Rezoom to bounding box of search result (but at least medium level)
+- Display last update date/most recent quote
+- Distinctive marker for locations with 10+ quotes
+- Rendering issues in Safari (add/removeClass not working right)
+- Shorter header
+- A bit of dragging is ok for triggering info windows
+- Filter info window based on search terms
+- Word level matches
+- Consolidate locations, e.g. "Times Square" and "Times Square station" or "Broadway & Waverly" and "Waverly & Broadway"
+- Duplicate quotes for some markers (e.g. Broadway & Waverly)
+- Handle clicks in the shadow
+- Close box overlap with header (e.g. at 21st and 6th)
+- shuffle mode
+- Do away with medium zoom level and keep neighborhoods and outlines until 14 (inclusive)
+- Minimize overlapping polygon sides between neighborhoods
+- 6th avenue locations mapped to Brooklyn
+- Replace neighborhoods polygons with faster canvas overlay
+- Better unescaping for the locations CSV reader
+- Fix geocoding for locations with store names in them
+- Make neighborhoods overlay work in MSIE (use canvas wrapper)
+- Consider single/better neighborhood border color(s)
+- DOM exception when opening info window
+- Linkify logo

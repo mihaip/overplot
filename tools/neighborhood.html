@@ -1,0 +1,219 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+    <title>Neighborhood</title>
+    <script src="http://maps.google.com/maps?file=api&amp;v=2&amp;key=abcdefg"
+            type="text/javascript"></script>
+    <script src="../web/util.js" type="text/javascript"></script>
+    <script src="../web/classes.js" type="text/javascript"></script>
+    <script src="../web/quotes.js" type="text/javascript"></script>
+    <script type="text/javascript">
+    //<![CDATA[
+    
+    var map;
+    var containerNode;
+    
+    var markers = [];
+    
+    var lastClickTime = 0;
+
+    function load() {
+      if (!GBrowserIsCompatible()) return;
+      
+      containerNode = getNode("map");
+      map = new GMap2(containerNode);
+      map.addControl(new GSmallMapControl());
+      map.setCenter(new GLatLng(40.731711, -73.987715), 14);
+      resizeMap();
+
+      window.onresize = resizeMap;
+
+      for (var i = 0, n; n = neighborhoods[i]; i++) {
+        map.addOverlay(n.getPolygon());
+      }
+      
+      var selectedIcon = new GIcon(G_DEFAULT_ICON, "selected-marker.png");
+      var selectedMarker = null;
+      
+      GEvent.addListener(map, "click", function(marker, point) {
+        window.setTimeout(function() {
+        var clickTime = new Date().getTime();
+
+        function deselectMarker() {
+          if (selectedMarker) {
+            var normalMarker = new GMarker(selectedMarker.getPoint(), {
+              title: selectedMarker.index + ""
+            });
+            normalMarker.index = selectedMarker.index;
+            markers[normalMarker.index] = normalMarker;
+
+            map.removeOverlay(selectedMarker);
+            map.addOverlay(normalMarker);
+            
+            selectedMarker = null;
+          }
+        }
+      
+        if (marker) {
+          var sameMarker = marker == selectedMarker;
+          
+          deselectMarker();
+          
+          if (!sameMarker) {
+            selectedMarker = new GMarker(marker.getPoint(), {
+              icon: selectedIcon,
+              title: marker.index + ""
+            });
+            
+            map.removeOverlay(marker);
+            map.addOverlay(selectedMarker);
+            
+            selectedMarker.index = marker.index;
+            markers[marker.index] = selectedMarker;
+          }
+        } else if (clickTime - lastClickTime < 250) {
+          if (selectedMarker) {
+            deselectMarker();
+          } else {
+            var newMarker = new GMarker(point, {
+              title: markers.length + ""
+            });
+            newMarker.index = markers.length;
+            
+            map.addOverlay(newMarker);
+            
+            markers.push(newMarker);
+            
+            redrawOutline();
+          }
+        } else if (selectedMarker) {
+          selectedMarker.setPoint(point);
+          redrawOutline();
+        }
+        
+        lastClickTime = clickTime;
+        
+        }, 0);
+      });
+    }
+    
+    function exportPoints() {
+      var pointStrings = [];
+      
+      for (var i = 0, marker; marker = markers[i]; i++) {
+        var p = marker.getPoint();
+        
+        pointStrings.push(p.lat() + "," + p.lng());
+      }
+      
+      getNode("out").value = pointStrings.join("\n");
+    }
+    
+    function importPoints() {
+      for (var i = 0, marker; marker = markers[i]; i++) {
+        map.removeOverlay(marker);
+      }
+      
+      markers = [];
+      var pointStrings = getNode("out").value.split(/\n/);
+      
+      for (var i = 0, pointString; pointString = pointStrings[i]; i++) {
+        var pair = pointString.split(",");
+        
+        var lat = parseFloat(pair[0]);
+        var lng = parseFloat(pair[1]);
+        
+        var point = new GLatLng(lat, lng);
+        
+        var marker = new GMarker(point, {
+          title: markers.length + ""
+        });
+        marker.index = markers.length;
+        
+        markers.push(marker);
+        
+        map.addOverlay(marker);
+        
+      }
+      
+      redrawOutline();
+    }
+
+    var polylineOverlay = null;
+    
+    function redrawOutline() {
+      if (polylineOverlay) {
+        map.removeOverlay(polylineOverlay);
+      }
+      
+      var points = [];
+      
+      for (var i = 0, marker; marker = markers[i]; i++) {
+        points.push(marker.getPoint());
+      }
+      points.push(markers[0].getPoint());
+      
+      polylineOverlay = new GPolyline(points, "#FF0000", 2, 0.5);
+      map.addOverlay(polylineOverlay);
+    }
+    
+    function resizeMap() {
+      var width, height;
+      
+      // all except Explorer
+      if (window.innerHeight) {
+        width = window.innerWidth;
+        height = window.innerHeight;
+      }
+      // Explorer 6 Strict Mode
+      else {
+        width = document.documentElement.clientWidth;
+        height = document.documentElement.clientHeight;
+      }  
+      
+      containerNode.style.width = width + "px";
+      containerNode.style.height = height + "px";
+      
+      map.checkResize();
+    }    
+
+    //]]>
+    </script>
+    <style type="text/css">
+      html, body {
+        margin: 0;
+        padding: 0;
+      }
+      
+      #map {
+        cursor: crosshair;
+      }
+      
+      #input {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        background: #fff;
+        padding: 5px;
+        border-top: solid 1px #ccc;
+        border-left: solid 1px #ccc;
+      }
+      
+      #input textarea {
+        display: block;
+      }
+    </style>
+  </head>
+  <body onload="load()" onunload="GUnload()">
+    <div id="map" style="width: 500px; height: 300px"></div>
+    
+    <div id="input">
+      <textarea rows="10" cols="40" id="out"></textarea>
+      <span style="color: red">Clockwise!</span>
+      <button onclick="exportPoints()">Export</button>
+      <button onclick="importPoints()">Import</button>
+    </div>
+  </body>
+</html>

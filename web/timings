@@ -1,0 +1,11 @@
+55 markers:
+  old: 411ms
+  new: 133ms
+  css: 52ms
+  events: 76ms
+  
+470 markers:
+  old: 4168ms
+  new: 1478ms
+  css: 492ms
+  events: 710ms

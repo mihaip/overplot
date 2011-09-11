@@ -1,0 +1,268 @@
+html, body {
+  padding: 0;
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #fff;
+  color: #000;
+}
+
+v\:* {
+
+  behavior:url(#default#VML);
+
+}
+
+.link {
+  color: #00c;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+#header {
+  padding: 0.5em;
+  border-bottom: solid 1px #ccc;
+  position: relative;
+  height: 75px;
+}
+
+#header form {
+  padding-top: 30px;
+  padding-left: 1em;
+  margin-left: 255px;
+  z-index: 2;
+  position: relative;
+  margin-right: 10em;
+}
+
+#header #logo-link {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: -255px;
+}
+
+.msie #header #logo-link {
+  margin-left: -1em;
+}
+
+#header #logo {
+  border: 0;
+}
+
+#header #status {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  z-index: 1;
+  font-size: 12px;
+  color: #888;
+  text-align: right;
+  padding: 0 0.5em 0.5em 0;
+}
+
+#header #status a,
+#header #status a:visited {
+  color: #00c;
+}
+
+#header #status p {
+  margin: 0.5em 0 0 0;
+}
+
+#header #search {
+  width: 20em;
+}
+
+#header #suggestion,
+#header #clear {
+  font-size: x-small;
+  margin: 0;
+}
+
+#header #suggestion {
+  color: #888;
+}
+
+#header #clear {
+  display: none;
+}
+
+.search #header #suggestion {
+  display: none;
+}
+
+.search #header #clear {
+  display: block;
+}
+
+.search .marker {
+  display: none;
+}
+
+.search .hit {
+  display: block;
+}
+
+#map {
+  position: absolute;
+  left: 0;
+}
+
+.marker {
+  position: absolute;
+  cursor: pointer;
+  color: #fff;
+  font-weight: bold;
+  text-align: center;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+#map.quotes .marker {
+  margin-top: -9px;
+  margin-left: -9px;
+  width: 16px;
+  height: 16px;
+  padding: 1px 3px 3px 1px;
+  background: url(marker.png);
+  z-index: 0;
+}
+
+.msie #map.quotes .marker {
+  background: transparent;
+  filter: progid:DXImageTransform.Microsoft.AlphaImageLoader(src='marker.png');
+}
+
+#map.quotes .marker-popular {
+  margin-top: -19px;
+  margin-left: -19px;
+  width: 36px;
+  height: 36px;
+  padding: 1px 5px 5px 1px;
+  background: url(marker-popular.png);
+  font-size: 23px;
+  line-height: 36px;
+  z-index: 1;
+}
+
+.msie #map.quotes .marker-popular {
+  background: transparent;
+  filter: progid:DXImageTransform.Microsoft.AlphaImageLoader(src='marker-popular.png');
+}
+
+#map.neighborhoods .marker-popular {
+  margin-top: -9px;
+  margin-left: -9px;
+  width: 18px;
+  height: 18px;
+  padding: 0px 4px 4px 0px;
+  background: url(marker-medium-popular.png);
+  z-index: 1;
+}
+
+.msie #map.neighborhoods .marker-popular {
+  background: transparent;
+  filter: progid:DXImageTransform.Microsoft.AlphaImageLoader(src='marker-medium-popular.png');
+}
+
+#map.neighborhoods .marker span {
+  display: none;
+}
+
+#map.neighborhoods .marker-in-neighborhood {
+  display: none;
+}
+
+.quote-info-window {
+  font-family: Arial, sans-serif;
+  width: 320px;
+}
+
+.quote-info-window h3 {
+  margin: 0 10px 0.7em 0;
+}
+
+.quote-info-window h3 a {
+  color: #33c;
+}
+
+.quote-info-window .body {
+  margin: 0 0 1.7em 0;
+}
+
+.quote-info-window .controller {
+  position: absolute;
+  left: -16px;
+  bottom: -16px;
+  border-width: 1px;
+  border-color: #ddd;
+  border-left-color: #aaa;
+  border-bottom-color: #aaa;
+  border-style: solid;
+  padding: 5px 5px 5px 10px;
+  background: #eee;
+  -moz-border-radius: 0 15px 0 25px;
+}
+
+.quote-info-window .controller span {
+  float: left;
+  display: block;
+}
+
+.quote-info-window .controller .button {
+  color: #33c;
+  padding: 0px 3px;
+  font-weight: bold;
+  margin: 0 3px;
+  cursor: pointer;
+}
+
+.quote-info-window .controller .status {
+  font-size: 87%;
+  margin-top: 0.2em;
+}
+
+.quote-info-window address {
+  position: absolute;
+  right: -15px;
+  bottom: -15px;
+  border-width: 1px 0 0 1px;
+  border-color: #ddd;
+  border-style: solid;
+  padding: 5px 10px 5px 5px;
+  background: #eee;
+  -moz-border-radius: 15px 0 20px 0;
+}
+
+.neighborhood-marker {
+  position: absolute;
+  background: #ccf;
+  color: #000;
+  top: -1000px;
+  left: -1000px;
+  border: solid 1px #99c;
+  text-align: center;
+  white-space: nowrap;
+  padding: 1px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.neighborhood-marker .quote-count {
+  color: #66a;
+  font-weight: normal;
+}
+
+#map.quotes .neighborhood-marker {
+  display: none;
+}
+
+#map.quotes canvas {
+  display: none;
+}
+
+canvas {
+  position: absolute;
+}

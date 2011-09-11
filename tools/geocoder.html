@@ -1,0 +1,255 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+    <title>Geocoder</title>
+    <script src="http://maps.google.com/maps?file=api&amp;v=2&amp;key=ABQIAAAAJ0mKfxWLw5cX4bPAyPILJhSKXUh0kKQGfjPjOS7wThZ3WpHdVxTTKMKS_xy9arcpgxz5ZScP45Qk0w"
+            type="text/javascript"></script>
+    <script src="../util.js" type="text/javascript"></script>
+    <script src="../classes.js" type="text/javascript"></script>
+    <script src="../quotes.js" type="text/javascript"></script>
+    <script type="text/javascript">
+    //<![CDATA[
+    
+    // Look for A, B, C, or D avenues so we can append the "Avenue" part
+    var ALPHABETVILLE_RE = /^(.+)\s+&\s+([ABCD])$/;
+    
+    // Look for Canal so we can append the "St." part
+    var CANAL_RE = /^Canal\s+&\s+(.*)$/;
+    
+    // Look for Park so we can append the "Avenue" part
+    var PARK_RE = /^(.*)\s+&\s+Park$/;
+    
+    // Look for <x> between <y> & <z>, so we search for <x> & <y> and <x> & <z>
+    // and take the midpoint between them
+    var BETWEEN_RE = /^(.+)\s+between\s+(.+)\s+&\s+(.+)$/;
+    
+    // Look for <location name>, <x> & <y>, so we can drop the location name
+    var LOCATION_NAME_RE = /^[^,]+,\s*(.+)\s+&\s+(.+)$/;
+    
+    var map;
+    var containerNode;
+    
+    var markers = [];
+    
+    var lastClickTime = 0;
+
+    function load() {
+      if (!GBrowserIsCompatible()) return;
+      
+      containerNode = getNode("map");
+      map = new GMap2(containerNode);
+      map.addControl(new GSmallMapControl());
+      map.setCenter(new GLatLng(40.731711, -73.987715), 14);
+      resizeMap();
+
+      window.onresize = resizeMap;
+    }
+    
+    function geocode() {
+      var outNode = getNode("out");
+      outNode.value = "";
+      
+      var locations = getNode("in").value.split(/\n/);
+      
+      var knownLocations = {};
+      
+/*     for (var i = 0, quote; quote = quotes[i]; i++) {
+        knownLocations[quote.location] = {
+          lat: quote.lat,
+          lng: quote.lng
+        };
+      }*/
+      
+      var geocoder = new GClientGeocoder();
+      geocoder.setCache(null);
+      var index = 0;
+      
+      function getGeocode(location, callback) {
+        var normalizedLocation = location;
+
+        normalizedLocation =
+            normalizedLocation.replace(LOCATION_NAME_RE, "$1 & $2");
+      
+        normalizedLocation = 
+            normalizedLocation.replace(ALPHABETVILLE_RE, "$1 & Avenue $2");
+        
+        normalizedLocation =
+            normalizedLocation.replace(CANAL_RE, "Canal St. & $1");
+        
+        normalizedLocation =
+            normalizedLocation.replace(PARK_RE, "$1 & Park Avenue");
+            
+        normalizedLocation += ", New York, NY";        
+        
+        window.console.info("geocoding " + normalizedLocation);
+        
+        geocoder.getLocations(
+          normalizedLocation, 
+          function (data) {
+          if (data.Status.code != G_GEO_SUCCESS) {
+            window.console.warn("  couldn't: " + data.Status.code);
+            callback(null);
+          } else {
+            var point = null;
+            if (data.Placemark.length == 1) {
+              point = data.Placemark[0].Point.coordinates;
+            } else {
+              window.console.info("  got " + data.Placemark.length + " results");
+              
+              // Favor locations on Broadway proper, as opposed to East/West
+              // Broadway or Broadway Aly
+              for (var i = 0, placemark; placemark = data.Placemark[i]; i++) {
+                if (placemark.address.indexOf("& Broadway") != -1) {
+                  point = placemark.Point.coordinates;
+                }
+              }
+              
+              // Fall back on the first result
+              if (!point) {
+                point = data.Placemark[0].Point.coordinates;
+              }
+            }
+
+            callback(new GLatLng(point[1], point[0]));          
+          }
+        });        
+      }
+      
+      function outputGeocode(location, point) {
+        outNode.value += '"' + location.replace(/"/, '""') + '",' +
+                         point.lat() + ',' +
+                         point.lng() + '\n';                      
+      }
+      
+      
+      function geocodeLocation() {
+        if (index >= locations.length) return;
+        
+        var location = locations[index];
+        
+        // Remove/unescape quotes from CSV input
+        location = location.replace(/^"(.*)"$/g, "$1");
+        location = location.replace(/""/g, '"');
+        
+        index++;        
+        
+        if (location in knownLocations) {
+          outNode.value += '"' + location + '",' +
+                           knownLocations[location].lat + ',' +
+                           knownLocations[location].lng + '\n';   
+          geocodeLocation();
+          return;
+        } else {
+/*          if (location.indexOf("between") == -1) {
+            geocodeLocation();
+            return;
+          }*/
+          
+          var betweenMatches = BETWEEN_RE.exec(location);
+          if (betweenMatches) {
+            var location1 = betweenMatches[1] + " & " + betweenMatches[2];
+            var location2 = betweenMatches[1] + " & " + betweenMatches[3];
+            
+            getGeocode(location1, function(point1) {
+              if (!point1) {
+                window.setTimeout(geocodeLocation, 1000);              
+                return;
+              }
+              
+              getGeocode(location2, function(point2) {
+                if (point2) {
+                  var betweenPoint = 
+                      new GLatLng((point1.lat() + point2.lat())/2,
+                                  (point1.lng() + point2.lng())/2);
+                  outputGeocode(location, betweenPoint);
+                }
+                window.setTimeout(geocodeLocation, 1000);                            
+              });
+            });
+            window.console.log(location1 + " and " + location2);
+          } else {
+            getGeocode(location, function(point) {
+              if (point) {
+                outputGeocode(location, point);
+              }
+              window.setTimeout(geocodeLocation, 1000);              
+            });
+          }
+          
+
+          
+          
+
+        }
+      }
+      
+      geocodeLocation();
+    }
+
+    function resizeMap() {
+      var width, height;
+      
+      // all except Explorer
+      if (window.innerHeight) {
+        width = window.innerWidth;
+        height = window.innerHeight;
+      }
+      // Explorer 6 Strict Mode
+      else {
+        width = document.documentElement.clientWidth;
+        height = document.documentElement.clientHeight;
+      }  
+      
+      width -= getNode("input").offsetWidth;
+      
+      containerNode.style.width = width + "px";
+      containerNode.style.height = height + "px";
+      
+      map.checkResize();
+    }    
+
+    //]]>
+    </script>
+    <style type="text/css">
+      html, body {
+        margin: 0;
+        padding: 0;
+      }
+      
+      #map {
+        cursor: crosshair;
+      }
+      
+      #input {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 500px;
+        height: 100%;
+        background: #fff;
+        padding: 0;
+        border-top: solid 1px #ccc;
+        border-left: solid 1px #ccc;
+        text-align: center;
+      }
+      
+      #input textarea {
+        display: block;
+        width: 490px;
+        height: 45%;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body onload="load()" onunload="GUnload()">
+    <div id="map" style="width: 500px; height: 300px"></div>
+    
+    <div id="input">
+      <textarea id="in"></textarea>
+      <button onclick="geocode()">Geocode</button>
+      <textarea id="out"></textarea>
+    </div>
+  </body>
+</html>
