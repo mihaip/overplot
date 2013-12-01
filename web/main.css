@@ -4,6 +4,7 @@ html, body {
   font-family: Arial, sans-serif;
   background: #fff;
   color: #000;
+  height: 100%;
 }
 
 v\:* {
@@ -106,14 +107,20 @@ v\:* {
 #map {
   position: absolute;
   left: 0;
+  top: 92px;
+  bottom: 0;
+  right: 0;
 }
 
 .marker {
   position: absolute;
   cursor: pointer;
   color: #fff;
-  font-weight: bold;
   text-align: center;
+}
+
+.marker .number {
+  font-weight: bold;
   font-family: Arial, sans-serif;
   font-size: 12px;
   line-height: 16px;
@@ -141,9 +148,12 @@ v\:* {
   height: 36px;
   padding: 1px 5px 5px 1px;
   background: url(marker-popular.png);
+  z-index: 1;
+}
+
+#map.quotes .marker-popular .number {
   font-size: 23px;
   line-height: 36px;
-  z-index: 1;
 }
 
 .msie #map.quotes .marker-popular {
@@ -166,7 +176,7 @@ v\:* {
   filter: progid:DXImageTransform.Microsoft.AlphaImageLoader(src='marker-medium-popular.png');
 }
 
-#map.neighborhoods .marker span {
+#map.neighborhoods .marker .number {
   display: none;
 }
 
@@ -176,7 +186,7 @@ v\:* {
 
 .quote-info-window {
   font-family: Arial, sans-serif;
-  width: 320px;
+  padding-bottom: 40px;
 }
 
 .quote-info-window h3 {
@@ -187,22 +197,18 @@ v\:* {
   color: #33c;
 }
 
-.quote-info-window .body {
-  margin: 0 0 1.7em 0;
-}
-
 .quote-info-window .controller {
   position: absolute;
-  left: -16px;
-  bottom: -16px;
-  border-width: 1px;
+  left: -11px;
+  bottom: -8px;
+  border-width: 1px 1px 0 0;
   border-color: #ddd;
   border-left-color: #aaa;
   border-bottom-color: #aaa;
   border-style: solid;
   padding: 5px 5px 5px 10px;
   background: #eee;
-  -moz-border-radius: 0 15px 0 25px;
+  border-top-right-radius: 15px;
 }
 
 .quote-info-window .controller span {
@@ -225,14 +231,14 @@ v\:* {
 
 .quote-info-window address {
   position: absolute;
-  right: -15px;
-  bottom: -15px;
+  right: -31px;
+  bottom: -8px;
   border-width: 1px 0 0 1px;
   border-color: #ddd;
   border-style: solid;
   padding: 5px 10px 5px 5px;
   background: #eee;
-  -moz-border-radius: 15px 0 20px 0;
+  border-top-left-radius: 15px;
 }
 
 .neighborhood-marker {

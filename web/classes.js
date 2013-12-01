@@ -3,6 +3,9 @@ var MEDIUM_ZOOM_THRESHOLD = 13;
 
 var POPULAR_THRESHOLD = 10;
 
+var infoWindow;
+var infoWindowCloseListener;
+
 var totalQuoteCount = 0;
 var latestTimestamp = 0;
 
@@ -18,11 +21,11 @@ function Neighborhood(name, quoteCount, outlinePoints, lat, lng, renderVertices)
 
   this.outlinePoints = [];
   for (var i = 0, pair; pair = outlinePoints[i]; i++) {
-    this.outlinePoints.push(new GLatLng(pair[0], pair[1]));
+    this.outlinePoints.push(new google.maps.LatLng(pair[0], pair[1]));
   }
   this.outlinePoints.push(this.outlinePoints[0]);
 
-  this.point = new GLatLng(lat, lng);
+  this.point = new google.maps.LatLng(lat, lng);
 
   var markerNode = newNode("div");
   markerNode.className = "neighborhood-marker";
@@ -49,7 +52,8 @@ Neighborhood.prototype.getPoint = function() {
 }
 
 Neighborhood.prototype.display = function() {
-  map.setCenter(this.point, LARGE_ZOOM_THRESHOLD);
+  map.setCenter(this.point);
+  map.setZoom(LARGE_ZOOM_THRESHOLD);
 }
 
 Neighborhood.prototype.getPolygon = function() {
@@ -66,7 +70,7 @@ function QuoteSet(location, lat, lng, neighborhoodIndex, quotes) {
   this.quotes = quotes;
   totalQuoteCount += quotes.length;
 
-  this.point = new GLatLng(this.lat, this.lng);
+  this.point = new google.maps.LatLng(this.lat, this.lng);
   this.iconNode = null;
   this.infoWindowNode = null;
 }
@@ -94,17 +98,10 @@ QuoteSet.prototype.getIconNode = function() {
     this.iconNode.quoteSet = this;
     this.iconNode.title = this.location;
 
-    this.iconNode.innerHTML = "<span>" + quoteCount + "</span>";
+    this.iconNode.innerHTML = "<span class='number'>" + quoteCount + "</span>";
   }
 
   return this.iconNode;
-}
-
-QuoteSet.prototype.getIconNodeBounds = function() {
-  var tl = new GPoint(this.iconNode.offsetLeft, this.iconNode.offsetTop);
-  var br = new GPoint(tl.x + this.iconNode.offsetWidth, tl.y + this.iconNode.offsetHeight);
-
-  return new GBounds([tl, br]);
 }
 
 QuoteSet.prototype.getQuotes = function() {
@@ -116,9 +113,20 @@ QuoteSet.prototype.getQuotes = function() {
 }
 
 QuoteSet.prototype.showInfoWindow = function() {
-  map.closeInfoWindow();
-  map.openInfoWindow(this.point,
-                     this.getInfoWindowNode());
+  if (infoWindow) {
+    infoWindow.close();
+    google.maps.event.removeListener(infoWindowCloseListener);
+  }
+  infoWindow = new google.maps.InfoWindow({
+      content: this.getInfoWindowNode(),
+      position: this.point,
+      maxWidth: 320
+  });
+  infoWindow.open(map);
+  infoWindowCloseListener = google.maps.event.addListenerOnce(
+    infoWindow, "closeclick", function() {
+      infoWindow = null;
+    });
 }
 
 QuoteSet.prototype.getInfoWindowNode = function() {
@@ -201,12 +209,9 @@ QuoteSet.prototype.displayQuote = function(index) {
     this.statusNode.innerHTML = (index + 1) + " of " + quotes.length;
   }
 
-  if (!map.getInfoWindow().isHidden()) {
-      this.infoWindowNode.style.display = "none";
-      map.openInfoWindow(this.point,
-                         this.infoWindowNode);
-      this.infoWindowNode.style.display = "";
-   }
+  if (infoWindow) {
+    infoWindow.setContent(this.infoWindowNode);
+  }
 }
 
 QuoteSet.prototype.filterForSearch = function(terms) {
@@ -273,30 +278,33 @@ function Quote(id, title, quote, source, timestamp) {
   }
 }
 
-function QuotesOverlay(quotes) {
-  GOverlay.call(this);
-
-  this.map = null;
+function QuotesOverlay(quotes, map) {
   this.quotes = quotes;
-  this.visibleQuotes = {};
-}
-
-QuotesOverlay.prototype.initialize = function(map) {
   this.map = map;
-  this.parentNode = map.getPane(G_MAP_MARKER_PANE);
+  this.addedListeners = [];
+  this.visibleQuotes = {};
 
-  // To handle clicks in the shadow, adding a simple handler to
-  // G_MAP_MARKER_MOUSE_TARGET_PANE doesn't seem to work, and we don't want
-  // to have to add DOM nodes there too. So instead we add a global click
-  // handler to the map that looks for clicked markers if the regular
-  // handler doesn't trigger
-  GEvent.bindDom(this.parentNode, "click", this, this.handleDomClick);
-  GEvent.bind(map, "click", this, this.handleMapClick);
-
-
-  GEvent.bind(map, "dragstart", this, this.beginMapDrag);
-  GEvent.bind(map, "dragend", this, this.endMapDrag);
+  this.setMap(map);
 }
+
+QuotesOverlay.prototype = new google.maps.OverlayView();
+
+QuotesOverlay.prototype.onAdd = function() {
+  this.parentNode = newNode("div");
+  this.getPanes().overlayMouseTarget.appendChild(this.parentNode);
+
+  this.addedListeners = [];
+  this.addedListeners.push(google.maps.event.addDomListener(
+    this.parentNode, "click", bind(this.handleDomClick, this)));
+  this.addedListeners.push(google.maps.event.addListener(
+    this.map, "dragstart", bind(this.beginMapDrag, this)));
+  this.addedListeners.push(google.maps.event.addListener(
+    this.map, "dragend", bind(this.endMapDrag, this)));
+  this.addedListeners.push(google.maps.event.addListener(
+    this.map, "drag", bind(this.updateVisibleQuotesDelayed, this)));
+  this.addedListeners.push(google.maps.event.addListener(
+    this.map, "idle", bind(this.updateVisibleQuotesDelayed, this)));
+};
 
 QuotesOverlay.prototype.beginMapDrag = function() {
   // Don't count short drags, so that they still trigger marker clicks
@@ -305,7 +313,7 @@ QuotesOverlay.prototype.beginMapDrag = function() {
     self.beginDragTimeout = null;
     self.inDrag = true;
   }, 250);
-}
+};
 
 QuotesOverlay.prototype.endMapDrag = function() {
   if (this.beginDragTimeout) {
@@ -318,27 +326,7 @@ QuotesOverlay.prototype.endMapDrag = function() {
       self.inDrag = false;
     }, 0);
   }
-}
-
-QuotesOverlay.prototype.handleMapClick = function(marker, point) {
-  var self = this;
-  this.handledClick = false;
-  window.setTimeout(function() {
-    if (self.handledClick) return;
-
-    var domPoint = map.fromLatLngToDivPixel(point);
-    var domBounds = new GBounds([domPoint]);
-
-    for (var location in self.visibleQuotes) {
-      var quote = self.visibleQuotes[location];
-
-      if (quote.getIconNodeBounds().containsBounds(domBounds)) {
-        self.handleDomClick({target: quote.getIconNode()});
-        break;
-      }
-    }
-  }, 0);
-}
+};
 
 QuotesOverlay.prototype.handleDomClick = function(event) {
   this.handledClick = true;
@@ -353,43 +341,30 @@ QuotesOverlay.prototype.handleDomClick = function(event) {
       break;
     }
   }
-}
+};
 
-QuotesOverlay.prototype.remove = function() {
-  window.console.log("TODO: removing");
-}
-
-QuotesOverlay.prototype.copy = function() {
-  window.console.log("TODO: copying");
-
-  return this;
-}
-
-QuotesOverlay.prototype.redraw = function(force) {
-  if (force) {
-    var zoom = map.getZoom();
-
-    if (zoom >= LARGE_ZOOM_THRESHOLD &&
-        !hasClass(containerNode, "quotes")) {
-      addClass(containerNode, "quotes");
-      removeClass(containerNode, "neighborhoods");
-    } else if (zoom < LARGE_ZOOM_THRESHOLD &&
-               !hasClass(containerNode, "neighborhoods")) {
-      removeClass(containerNode, "quotes");
-      addClass(containerNode, "neighborhoods");
-    }
-
-    this.resetVisibleQuotes();
-  } else {
-    if (this.updateVisibleQuotesTimeout) {
-      window.clearTimeout(this.updateVisibleQuotesTimeout);
-    }
-    var self = this;
-    this.updateVisibleQuotesTimeout = window.setTimeout(function() {
-      self.updateVisibleQuotesTimeout = null;
-      self.updateVisibleQuotes();
-    }, 100);
+QuotesOverlay.prototype.onRemove = function() {
+  this.parentNode.parentNode.removeChild(this.parentNode);
+  for (var i = 0; i < this.addedListeners.length; i++) {
+    google.maps.event.removeListener(this.addedListeners[i]);
   }
+};
+
+QuotesOverlay.prototype.draw = function() {
+  var map = this.getMap();
+  var zoom = map.getZoom();
+
+  if (zoom >= LARGE_ZOOM_THRESHOLD &&
+      !hasClass(containerNode, "quotes")) {
+    addClass(containerNode, "quotes");
+    removeClass(containerNode, "neighborhoods");
+  } else if (zoom < LARGE_ZOOM_THRESHOLD &&
+             !hasClass(containerNode, "neighborhoods")) {
+    removeClass(containerNode, "quotes");
+    addClass(containerNode, "neighborhoods");
+  }
+
+  this.resetVisibleQuotes();
 }
 
 QuotesOverlay.prototype.resetVisibleQuotes = function() {
@@ -415,12 +390,13 @@ QuotesOverlay.prototype.updateVisibleQuotes = function() {
   var sw = mapBounds.getSouthWest();
   var ne = mapBounds.getNorthEast();
 
-  sw = new GLatLng(sw.lat() - 0.001, sw.lng() - 0.001);
-  ne = new GLatLng(ne.lat() + 0.001, ne.lng() + 0.001);
+  sw = new google.maps.LatLng(sw.lat() - 0.001, sw.lng() - 0.001);
+  ne = new google.maps.LatLng(ne.lat() + 0.001, ne.lng() + 0.001);
 
-  mapBounds = new GLatLngBounds(sw, ne);
+  mapBounds = new google.maps.LatLngBounds(sw, ne);
 
-  zoom = map.getZoom();
+  var zoom = this.map.getZoom();
+  var projection = this.getProjection();
 
   visibleCount = 0;
   for (var i = 0, quoteSet; quoteSet = this.quotes[i]; i++) {
@@ -454,7 +430,7 @@ QuotesOverlay.prototype.updateVisibleQuotes = function() {
 
   for (var i = 0, quoteSet; quoteSet = quotesToAdd[i]; i++) {
     var iconNode = quoteSet.getIconNode();
-    var iconPosition = this.map.fromLatLngToDivPixel(quoteSet.getPoint());
+    var iconPosition = projection.fromLatLngToDivPixel(quoteSet.getPoint());
 
     iconNode.style.left = iconPosition.x + "px";
     iconNode.style.top = iconPosition.y + "px";
@@ -473,38 +449,52 @@ QuotesOverlay.prototype.updateVisibleQuotes = function() {
         " (" + (addStart - removeStart) + "ms)");
 }
 
-function NeighborhoodsOverlay(neighborhoods) {
-  GOverlay.call(this);
+QuotesOverlay.prototype.updateVisibleQuotesDelayed = function() {
+  if (this.updateVisibleQuotesTimeout) {
+    window.clearTimeout(this.updateVisibleQuotesTimeout);
+  }
+  var self = this;
+  this.updateVisibleQuotesTimeout = window.setTimeout(function() {
+    self.updateVisibleQuotesTimeout = null;
+    self.updateVisibleQuotes();
+  }, 100);
+};
 
-  this.map = null;
+function NeighborhoodsOverlay(neighborhoods, map) {
   this.neighborhoods = neighborhoods;
+  this.map = map;
+  this.addedListeners = [];
 
   this.min = this.max = this.neighborhoods[0].outlinePoints[0];
 
   for (var i = 0, n; n = this.neighborhoods[i]; i++) {
     for (var j = 0, p; p = n.outlinePoints[j]; j++) {
       if (p.lat() < this.min.lat()) {
-        this.min = new GLatLng(p.lat(), this.min.lng());
+        this.min = new google.maps.LatLng(p.lat(), this.min.lng());
       }
 
       if (p.lat() > this.max.lat()) {
-        this.max = new GLatLng(p.lat(), this.max.lng());
+        this.max = new google.maps.LatLng(p.lat(), this.max.lng());
       }
 
       if (p.lng() < this.min.lng()) {
-        this.min = new GLatLng(this.min.lat(), p.lng());
+        this.min = new google.maps.LatLng(this.min.lat(), p.lng());
       }
 
       if (p.lng() > this.max.lng()) {
-        this.max = new GLatLng(this.max.lat(), p.lng());
+        this.max = new google.maps.LatLng(this.max.lat(), p.lng());
       }
     }
   }
-}
 
-NeighborhoodsOverlay.prototype.initialize = function(map) {
-  this.map = map;
-  this.parentNode = map.getPane(G_MAP_MARKER_PANE);
+
+  this.setMap(map);
+}
+NeighborhoodsOverlay.prototype = new google.maps.OverlayView();
+
+NeighborhoodsOverlay.prototype.onAdd = function() {
+  this.parentNode = newNode("div");
+  this.getPanes().overlayImage.appendChild(this.parentNode);
 
   this.canvasNode = newNode("canvas");
   this.parentNode.appendChild(this.canvasNode);
@@ -513,32 +503,31 @@ NeighborhoodsOverlay.prototype.initialize = function(map) {
     this.canvasNode = G_vmlCanvasManager.initElement(this.canvasNode);
   }
 
+  this.addedListeners = [];
   for (var i = 0, n; n = this.neighborhoods[i]; i++) {
-    markerNode = n.getMarkerNode();
-
-    GEvent.bindDom(markerNode, "click", n, n.display);
-
+    var markerNode = n.getMarkerNode();
+    this.addedListeners.push(
+        google.maps.event.addDomListener(
+            markerNode, "click", bind(n.display, n)));
     this.parentNode.appendChild(markerNode);
   }
-}
+};
 
-NeighborhoodsOverlay.prototype.remove = function() {
-  window.console.log("TODO: removing");
-}
+NeighborhoodsOverlay.prototype.onRemove = function() {
+  this.parentNode.parentNode.removeChild(this.parentNode);
+  for (var i = 0; i < this.addedListeners.length; i++) {
+    google.maps.event.removeListener(this.addedListeners[i]);
+  }
+};
 
-NeighborhoodsOverlay.prototype.copy = function() {
-  window.console.log("TODO: copying");
-
-  return this;
-}
-
-NeighborhoodsOverlay.prototype.redraw = function(force) {
-  if (!force || map.getZoom() >= LARGE_ZOOM_THRESHOLD) {
+NeighborhoodsOverlay.prototype.draw = function() {
+  if (map.getZoom() >= LARGE_ZOOM_THRESHOLD) {
     return;
   }
 
-  var minInPixels = map.fromLatLngToDivPixel(this.min);
-  var maxInPixels = map.fromLatLngToDivPixel(this.max);
+  var projection = this.getProjection();
+  var minInPixels = projection.fromLatLngToDivPixel(this.min);
+  var maxInPixels = projection.fromLatLngToDivPixel(this.max);
 
   var width = maxInPixels.x - minInPixels.x;
   var height = -(maxInPixels.y - minInPixels.y);
@@ -560,7 +549,7 @@ NeighborhoodsOverlay.prototype.redraw = function(force) {
   var t;
 
   function getCanvasPoint(p) {
-    p = map.fromLatLngToDivPixel(p);
+    p = projection.fromLatLngToDivPixel(p);
 
     p.x -= minInPixels.x;
     p.y -= maxInPixels.y;
@@ -571,7 +560,7 @@ NeighborhoodsOverlay.prototype.redraw = function(force) {
   for (var i = 0, n; n = this.neighborhoods[i]; i++) {
     // Update marker node
     var markerNode = n.getMarkerNode();
-    var location = map.fromLatLngToDivPixel(n.getPoint());
+    var location = projection.fromLatLngToDivPixel(n.getPoint());
 
     markerNode.style.left = location.x - markerNode.offsetWidth/2 + "px";
     markerNode.style.top = location.y + "px";
@@ -596,4 +585,4 @@ NeighborhoodsOverlay.prototype.redraw = function(force) {
   var end = new Date().getTime();
   window.console.log("redrew " + width + " x " + height +
                      " canvas: " + (end - start) + "ms");
-}
+};

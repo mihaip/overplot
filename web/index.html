@@ -11,7 +11,7 @@
     </script>
     <link rel="stylesheet" type="text/css" href="main.css" />
   </head>
-  <body onload="load()" onunload="GUnload()">
+  <body onload="load()">
     <div id="header">
 
       <form onsubmit="runSearch(); return false;">
@@ -57,13 +57,13 @@
       </div>
     </div>
 
-    <div id="map" style="width: 100%; height: 600px">
+    <div id="map">
       <div style="text-align: center; margin-top: 100px;color: #aaa;">Loading...</div>
     </div>
 
     <!-- script tags go here so the loading message can be displayed -->
 
-    <script src="http://maps.google.com/maps?file=api&amp;v=2&amp;key=ABQIAAAAJ0mKfxWLw5cX4bPAyPILJhSKXUh0kKQGfjPjOS7wThZ3WpHdVxTTKMKS_xy9arcpgxz5ZScP45Qk0w"
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC9FAsYBApGLMjmr3pZNuNjLD7iJopejPU&sensor=false"
             type="text/javascript"></script>
     <!--[if IE]>
       <script src="excanvas.js" type="text/javascript"></script>

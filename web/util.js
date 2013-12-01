@@ -1,6 +1,22 @@
 // If FireBug/Safari isn't running
 if (!window.console) window.console = {log: function(x) {}};
 
+function bind(fn, instance, var_args) {
+    if (fn.bind) {
+        return fn.call.apply(fn.bind, arguments);
+    }
+    var args = [];
+    for (var i = 2; i < arguments.length; i++) {
+        args.push(arguments[i]);
+    }
+    return function() {
+        for (var i = 0; i < arguments.length; i++) {
+            args.push(arguments[i]);
+        }
+        return fn.apply(instance, args);
+    }
+};
+
 function newNode(tagName) {
   return document.createElement(tagName);
 }
