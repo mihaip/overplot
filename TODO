@@ -1,12 +1,12 @@
 TODO:
-- Cross-browser rounded corner in bubble
+- Port tools/ to Google Maps API v3
 - Bad geocodes:
   Merrill Lynch lobby, Broadway & Park Row
   13 & Broadway
   116 & Broadway
 - Add date and heard by in info window bubble
 
-  
+
 Done:
 - Neighborhoods when really zoomed out
 - Flickering when switching between quotes
